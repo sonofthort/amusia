@@ -1,0 +1,4 @@
+amusia
+======
+
+C++ music generator
