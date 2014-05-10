@@ -8,46 +8,52 @@ namespace amusia
 {
 	// first declare some generic helpers
 	
-	const float pi = 3.14159265358979323846F, pi2 = pi * 2;
+	const double tau = 6.283185307179586476925286766559;
 
-	float granularize( float value, float size )
+	double granularize( double value, double size )
 	{
-		const float steps = floor( value / size );
+		const double steps = floor( value / size );
 		return steps * size;
 	}
 
 	//  0 < value <= 1
-	float granularize( float value, float max, float n )
+	double granularize( double value, double max, double n )
 	{
-		const float stepSize = max / n;
+		const double stepSize = max / n;
 		return granularize( value * max, stepSize );
 	}
 
-	float curlicue( float i, float k )
+	double curlicue( double i, double k )
 	{
 		// a = i^2 * k, with a little modular arithmetic to get around overflow (angular arithmetic is modular, by 2*pi)
-		return fmod( fmod( i * fmod( i, pi2 ), pi2 ) * k, pi2 );
+		return fmod( fmod( i * fmod( i, tau ), tau ) * k, tau );
 	}
 
-	namespace scale
+	// returns value between 0 and 1 instead of 0 and tau
+	double curlicueNormalized( double i, double k )
+	{
+		return curlicue( i, k ) / tau;
+	}
+
+	namespace scales
 	{
 		struct EqualTemperament
 		{
-			EqualTemperament( float notesPerOctave, float adjuster = 0 ) :
+			EqualTemperament( double notesPerOctave, double adjuster = 0 ) :
 				notesPerOctave( notesPerOctave ),
 				adjuster( adjuster )
 			{}
 
-			float operator()( float n ) const
+			double operator()( double n ) const
 			{
-				return powf( 2, floorf( n + adjuster ) / notesPerOctave );
+				return pow( 2, floor( n + adjuster ) / notesPerOctave );
 			}
 
-			const float notesPerOctave;
-			const float adjuster;
+			const double notesPerOctave;
+			const double adjuster;
 		};
 
-		float equalTemperament( float n, float notesPerOctave, float adjuster = 0 )
+		double equalTemperament( double n, double notesPerOctave, double adjuster = 0 )
 		{
 			return EqualTemperament( notesPerOctave, adjuster )( n );
 		}
@@ -56,112 +62,87 @@ namespace amusia
 		const auto twelveToneEqualTemperament = EqualTemperament( 12, 0.3764f );
 	}
 
-	namespace note
+	namespace notes
 	{
-		struct Note
-		{
-			Note( float first = 0 ) :
-				first( first )
-			{}
-			
-			bool operator ==( const Note &other ) const
-			{
-				return first == other.first;
-			}
-
-			bool operator !=( const Note &other ) const
-			{
-				return first != other.first;
-			}
-
-			template < class Octave >
-			float operator()( Octave octave ) const
-			{
-				return scale::twelveToneEqualTemperament( static_cast< float >( first + octave * 12 ) );
-			}
-
-			float first;
-		};
-
-		const Note
-			c		= Note( 0 ),
-			cSharp	= Note( 1 ),
-			dFlat	= Note( 1 ),
-			d		= Note( 2 ),
-			dSharp	= Note( 3 ),
-			eFlat	= Note( 3 ),
-			e		= Note( 4 ),
-			eSharp	= Note( 5 ),
-			fFlat	= Note( 4 ),
-			f		= Note( 5 ),
-			fSharp	= Note( 6 ),
-			gFlat	= Note( 6 ),
-			g		= Note( 7 ),
-			gSharp	= Note( 8 ),
-			aFlat	= Note( 8 ),
-			a		= Note( 9 ),
-			aSharp	= Note( 10 ),
-			bFlat	= Note( 10 ),
-			b		= Note( 11 ),
-			bSharp	= Note( 12 ),
-			cFlat	= Note( 11 );
+		const double
+			c		= 0,
+			cSharp	= 1,
+			dFlat	= 1,
+			d		= 2,
+			dSharp	= 3,
+			eFlat	= 3,
+			e		= 4,
+			eSharp	= 5,
+			fFlat	= 4,
+			f		= 5,
+			fSharp	= 6,
+			gFlat	= 6,
+			g		= 7,
+			gSharp	= 8,
+			aFlat	= 8,
+			a		= 9,
+			aSharp	= 10,
+			bFlat	= 10,
+			b		= 11,
+			bSharp	= 12,
+			cFlat	= 11;
 	}
-
-	namespace scale
+	
+	struct Scale
 	{
-		struct Scale
+		Scale()
 		{
-			Scale()
-			{
-				memset( positions, 0, sizeof( positions ) );
-				numPositions = 1;
-			}
+			memset( positions, 0, sizeof( positions ) );
+			numPositions = 1;
+		}
 
-			template < class First, class... Positions >
-			Scale( First first, Positions... positions )
-			{
-				static const auto numPositions = sizeof...( Positions ) + 1;
-				static_assert( numPositions <= 12, "Max 12 positions" );
-				const std::size_t copyBuffer[ 12 ] = { static_cast< std::size_t >( first ),
-					static_cast< std::size_t >( positions )... };
-				memcpy( this->positions, copyBuffer, sizeof( copyBuffer ) );
-				this->numPositions = numPositions;
-			}
+		template < class First, class... Positions >
+		Scale( First first, Positions... positions )
+		{
+			static const auto numPositions = sizeof...( Positions ) + 1;
+			static_assert( numPositions <= 12, "Max 12 positions" );
+			const std::size_t copyBuffer[ 12 ] = { static_cast< std::size_t >( first ),
+				static_cast< std::size_t >( positions )... };
+			memcpy( this->positions, copyBuffer, sizeof( copyBuffer ) );
+			this->numPositions = numPositions;
+		}
 			
-			bool operator ==( const Scale &other ) const
-			{
-				return numPositions == other.numPositions &&
-					0 == memcmp( positions, other.positions, sizeof( std::size_t ) * numPositions );
-			}
+		bool operator ==( const Scale &other ) const
+		{
+			return numPositions == other.numPositions &&
+				0 == memcmp( positions, other.positions, sizeof( std::size_t ) * numPositions );
+		}
 
-			bool operator !=( const Scale &other ) const
-			{
-				return !( *this == other );
-			}
+		bool operator !=( const Scale &other ) const
+		{
+			return !( *this == other );
+		}
 
-			float operator()( note::Note note_, float position ) const
-			{
-				const auto n = static_cast< std::size_t >( floor( position ) ) % numPositions;
-				return twelveToneEqualTemperament( note_.first + positions[ n ] + 12 * floor( position / numPositions ) );
-			}
+		double operator()( double note, double position ) const
+		{
+			const auto n = static_cast< std::size_t >( floor( position ) ) % numPositions;
+			return scales::twelveToneEqualTemperament( note + positions[ n ] + 12 * floor( position / numPositions ) );
+		}
 
-			std::size_t positions[ 12 ];
-			std::size_t numPositions;
-		};
+		std::size_t positions[ 12 ];
+		std::size_t numPositions;
+	};
 
+	namespace scales
+	{
 		const Scale
 			major			= Scale( 0, 2, 4, 5, 7, 9, 11 ),
 			minor			= Scale( 0, 2, 3, 5, 7, 8, 10 ),
 			diminished		= Scale( 0, 3, 6, 9 ),
 			augmented		= Scale( 0, 4, 8 ),
 			harmonicMinor	= Scale( 0, 2, 3, 5, 7, 8, 11 ),
-			majorBlues		= Scale( 0, 2, 3, 4, 7, 9, 10 );
+			majorBlues		= Scale( 0, 2, 4, 7, 9, 10 );
 	}
 
-	namespace arpeggio
-	{
-		typedef scale::Scale Arpeggio;
+	typedef Scale Arpeggio;
 
+	namespace arpeggios
+	{
 		const Arpeggio
 			major				= Arpeggio( 0, 4, 7 ),
 			minor				= Arpeggio( 0, 3, 7 ),
@@ -175,49 +156,43 @@ namespace amusia
 			ambiguousSeven		= Arpeggio( 0, 3, 4, 7, 10 );
 	}
 
-	// returns value between 0 and 1 instead of 0 and 2*pi
-	float curlicueNormalized( float i, float k )
-	{
-		return fmod( fmod( i * fmod( i, pi2 ), pi2 ) * k, pi2 ) / pi2;
-	}
-
-	namespace voice
+	namespace voices
 	{
 		// a voice is a function taking frequency and time, and returning a number between -1 and 1
-		// as time progresses, the voice function should "draw" a wave
+		// as time progresses, the voice function should "draw" a wave at the given frequency
 
-		const auto sine = []( float frequency, float time )
+		const auto sine = []( double frequency, double time )
 		{
-			return sinf( frequency * time * pi2 );
+			return sin( frequency * time * tau );
 		};
 
-		const auto square = []( float frequency, float time )
+		const auto square = []( double frequency, double time )
 		{
-			return sine( frequency, time ) > 0 ? 1.0f : -1.0f;
+			return sine( frequency, time ) > 0 ? 1.0 : -1.0;
 		};
 
-		const auto sawtooth = []( float frequency, float time )
+		const auto sawtooth = []( double frequency, double time )
 		{
-			return fmod( frequency * time, 2 ) - 1;
+			return fmod( frequency * time, 2 ) - 1.0;
 		};
 
-		const auto silent = []( float, float )
+		const auto silent = []( double, double )
 		{
-			return 0.0f;
+			return 0.0;
 		};
 
 		struct Steps
 		{
-			Steps( float numSteps ) :
+			Steps( double numSteps ) :
 				numSteps( numSteps )
 			{}
 
-			float operator()( float frequency, float time ) const
+			double operator()( double frequency, double time ) const
 			{
-				return granularize( sine( frequency, time ) + 1, numSteps ) - 1;
+				return granularize( sine( frequency, time ) + 1, 2 / numSteps ) - 1;
 			}
 
-			const float numSteps;
+			const double numSteps;
 		};
 	}
 
@@ -245,7 +220,7 @@ namespace amusia
 			return file.channels();
 		}
 
-		float getDurationSeconds() const
+		double getDurationSeconds() const
 		{
 			return durationSeconds;
 		}
@@ -253,19 +228,20 @@ namespace amusia
 		template <	class Frequency,	// numeric
 					class Amplitude,	// numeric, between 0 and 1 inclusive
 					class Seconds,		// numeric
-					class Voice >		// float( float frequency, float time )
+					class Voice >		// double( double frequency, double time )
 		void addNote( Frequency frequency, Amplitude amplitude, Seconds seconds, Voice voice )
 		{
-			const float	fFrequency	= static_cast< float >( frequency ),
-						fAmplitude	= static_cast< float >( amplitude ),
-						fSampleRate	= static_cast< float >( getSampleRate() ),
-						numPoints	= static_cast< float >( fSampleRate * seconds );
+			const double
+				dFrequency	= static_cast< double >( frequency ),
+				dAmplitude	= static_cast< double >( amplitude ),
+				dSampleRate	= static_cast< double >( getSampleRate() ),
+				numPoints	= static_cast< double >( dSampleRate * seconds );
 
 			data.reserve( data.size() + static_cast< std::size_t >( numPoints ) );
 
-			for ( float i = 0; i < numPoints; i += 1 )
+			for ( double i = 0; i < numPoints; i += 1 )
 			{
-				data.push_back( (float)voice( fFrequency, durationSeconds + i / fSampleRate ) * fAmplitude );
+				data.push_back( static_cast< float >( voice( dFrequency, durationSeconds + i / dSampleRate ) * dAmplitude ) );
 			}
 
 			durationSeconds += seconds;
@@ -274,7 +250,7 @@ namespace amusia
 		template < class Seconds > // numeric
 		void addRest( Seconds seconds )
 		{
-			addNote( 0, 0, seconds, []( float, float ) { return 0.0F; } );
+			addNote( 0, 0, seconds, voices::silent );
 		}
 
 		bool save()
@@ -286,6 +262,6 @@ namespace amusia
 
 		SndfileHandle file;
 		std::vector< float > data;
-		float durationSeconds;
+		double durationSeconds;
 	};
 }

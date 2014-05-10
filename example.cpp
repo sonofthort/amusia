@@ -11,49 +11,53 @@ int main()
 
 	srand( static_cast< unsigned int >( time( nullptr ) ) );
 	
-	float	n = 2000,
+	double	n = 2000,
 			notelengthSeconds = 1 / 8.0f,
-			k = 341;
+			k = 777;
 
 	std::ostringstream name;
 	name << "curlicue_" << (int)k << '_' << (int)n << ".wav";
-	WaveBuilder wav( name.str().c_str(), 1, 48000 );
-	wav.reserve( n * notelengthSeconds );
-	note::Note note_;
-	arpeggio::Arpeggio arpeggio_;	
+
+	WaveBuilder wave( name.str().c_str(), 1, 48000 );
+	wave.reserve( n * notelengthSeconds );
+
+	double note;
+	Arpeggio arpeggio;	
 
 	for ( float i = 0; i < n; i += 1 )
 	{
 		switch ( (int)i % 64 )
 		{
 		case 0:
-			note_ = note::c;
-			arpeggio_ = arpeggio::majorMajorSeven;
+			note = notes::c;
+			arpeggio = scales::majorBlues;
 			std::cout << "c major\n";
 			break;
 		case 15:
-			note_ = note::a;
-			arpeggio_ = arpeggio::minorSeven;
+			note = notes::a;
+			arpeggio = arpeggios::minorSeven;
 			std::cout << "a minor\n";
 			break;
 		case 31:
-			note_ = note::f;
-			arpeggio_ = arpeggio::majorMajorSeven;
+			note = notes::f;
+			arpeggio = arpeggios::majorMajorSeven;
 			std::cout << "f major\n";
 			break;
 		case 47:
-			note_ = note::g;
-			arpeggio_ = arpeggio::majorSeven;
+			note = notes::g;
+			arpeggio = arpeggios::majorSeven;
 			std::cout << "g major\n";
 			break;
 		}
 
-		const float normalizedA = curlicueNormalized( i, k );
-		const float frequency = arpeggio_( note_, floor( normalizedA * arpeggio_.numPositions * 3 ) + arpeggio_.numPositions * 7 );
-		wav.addNote( frequency, .75, notelengthSeconds, voice::sine );
+		const double
+			normalizedA = curlicueNormalized( i, k ),
+			frequency = arpeggio( note + 12 * 7, floor( normalizedA * arpeggio.numPositions * 3 ) );
+
+		wave.addNote( frequency, .75, notelengthSeconds, voices::Steps( 8 ) );
 	}
 
-	wav.save();
+	wave.save();
 
     return 0;
 }
