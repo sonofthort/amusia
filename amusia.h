@@ -1,13 +1,15 @@
 #pragma once
 
 #include <sndfile.hh>
-#include <cmath>
+#include <functional>
 #include <vector>
+#include <array>
+#include <cmath>
 
 namespace amusia
 {
 	// first declare some generic helpers
-	
+
 	const double tau = 6.283185307179586476925286766559;
 
 	double granularize( double value, double size )
@@ -101,12 +103,14 @@ namespace amusia
 		{
 			static const auto numPositions = sizeof...( Positions ) + 1;
 			static_assert( numPositions <= 12, "Max 12 positions" );
+
 			const std::size_t copyBuffer[ 12 ] = { static_cast< std::size_t >( first ),
 				static_cast< std::size_t >( positions )... };
+
 			memcpy( this->positions, copyBuffer, sizeof( copyBuffer ) );
 			this->numPositions = numPositions;
 		}
-			
+		
 		bool operator ==( const Scale &other ) const
 		{
 			return numPositions == other.numPositions &&
@@ -124,36 +128,41 @@ namespace amusia
 			return scales::twelveToneEqualTemperament( note + positions[ n ] + 12 * floor( position / numPositions ) );
 		}
 
-		std::size_t positions[ 12 ];
-		std::size_t numPositions;
+		std::size_t positions[ 12 ],
+			numPositions;
 	};
 
 	namespace scales
 	{
 		const Scale
-			major			= Scale( 0, 2, 4, 5, 7, 9, 11 ),
-			minor			= Scale( 0, 2, 3, 5, 7, 8, 10 ),
-			diminished		= Scale( 0, 3, 6, 9 ),
-			augmented		= Scale( 0, 4, 8 ),
-			harmonicMinor	= Scale( 0, 2, 3, 5, 7, 8, 11 ),
-			majorBlues		= Scale( 0, 2, 4, 7, 9, 10 );
+			major			( 0, 2, 4, 5, 7, 9, 11 ),
+			minor			( 0, 2, 3, 5, 7, 8, 10 ),
+			diminished		( 0, 3, 6, 9 ),
+			augmented		( 0, 4, 8 ),
+			harmonicMinor	( 0, 2, 3, 5, 7, 8, 11 ),
+			majorBlues		( 0, 2, 4, 7, 9, 10 ),
+			minorBlues		( 0, 2, 3, 7, 8, 10 );
 	}
-
-	typedef Scale Arpeggio;
 
 	namespace arpeggios
 	{
-		const Arpeggio
-			major				= Arpeggio( 0, 4, 7 ),
-			minor				= Arpeggio( 0, 3, 7 ),
-			diminished			= Arpeggio( 0, 3, 6 ),
-			augmented			= Arpeggio( 0, 4, 8 ),
-			majorSeven			= Arpeggio( 0, 4, 7, 10 ),
-			minorSeven			= Arpeggio( 0, 3, 7, 10 ),
-			majorMajorSeven		= Arpeggio( 0, 4, 7, 11 ),
-			minorMajorSeven		= Arpeggio( 0, 3, 7, 11 ),
-			ambiguous			= Arpeggio( 0, 3, 4, 7 ),
-			ambiguousSeven		= Arpeggio( 0, 3, 4, 7, 10 );
+		const Scale
+			major			( 0, 4, 7 ),
+			minor			( 0, 3, 7 ),
+			diminished		( 0, 3, 6 ),
+			augmented		( 0, 4, 8 ),
+			majorSix		( 0, 4, 7, 9 ),
+			minorSix		( 0, 3, 7, 9 ),
+			majorSeven		( 0, 4, 7, 10 ),
+			minorSeven		( 0, 3, 7, 10 ),
+			majorNine		( 0, 4, 7, 10, 14 ),
+			minorNine		( 0, 3, 7, 10, 14 ),
+			majorMajorSeven	( 0, 4, 7, 11 ),
+			minorMajorSeven	( 0, 3, 7, 11 ),
+			majorMajorNine	( 0, 4, 7, 11, 13 ),
+			minorMajorNine	( 0, 3, 7, 11, 13 ),
+			ambiguous		( 0, 3, 4, 7 ),
+			ambiguousSeven	( 0, 3, 4, 7, 10 );
 	}
 
 	namespace voices
@@ -161,22 +170,22 @@ namespace amusia
 		// a voice is a function taking frequency and time, and returning a number between -1 and 1
 		// as time progresses, the voice function should "draw" a wave at the given frequency
 
-		const auto sine = []( double frequency, double time )
+		auto sine = []( double frequency, double time )
 		{
 			return sin( frequency * time * tau );
 		};
 
-		const auto square = []( double frequency, double time )
+		auto square = []( double frequency, double time )
 		{
 			return sine( frequency, time ) > 0 ? 1.0 : -1.0;
 		};
 
-		const auto sawtooth = []( double frequency, double time )
+		auto sawtooth = []( double frequency, double time )
 		{
 			return fmod( frequency * time, 2 ) - 1.0;
 		};
 
-		const auto silent = []( double, double )
+		auto silent = []( double, double )
 		{
 			return 0.0;
 		};
@@ -193,6 +202,33 @@ namespace amusia
 			}
 
 			const double numSteps;
+		};
+	}
+
+	typedef std::function< void() > Sequence;
+
+	template < class... Sequences >
+	Sequence join( Sequences... sequences )
+	{
+		std::array< Sequence, sizeof...( Sequences ) > sequenceArray = { sequences... };
+		return [ sequenceArray ]()
+		{
+			for ( const auto &sequence : sequenceArray )
+			{
+				sequence();
+			}
+		};
+	}
+
+	template < class N >
+	Sequence repeat( Sequence sequence, N n )
+	{
+		return [ sequence, n ]()
+		{
+			for ( N i = 0; i < n; i = i + 1 )
+			{
+				sequence();
+			}
 		};
 	}
 
