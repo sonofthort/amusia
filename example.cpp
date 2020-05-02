@@ -1,76 +1,201 @@
+#include <ctime>
 #include <iostream>
 #include <sstream>
-#include <ctime>
-#include "amusia.h"
 
-int main()
-{
-	using namespace amusia;
+#include "amusia/amusia.h"
 
-	srand(static_cast<unsigned int>(time(nullptr)));
+int main() {
+  auto make_track = [](double k, int octave, const auto &voice) {
+    int i = 0;
+    amusia::WaveMemoryBuilder wave;
 
-	// 2130 can produce a slow melody
-	double k = 3;
+    auto chord = [&](const amusia::NoteList& chord, std::size_t n) {
+      return [chord, n, k, &wave, &i, &voice]() {
+        for (const auto end = i + n; i < end; ++i) {
+          wave.addNote(amusia::notes::frequency(
+                           amusia::curlicueSelectFrom(i, k + 1, chord)),
+                       amusia::curlicueNormalized(i, k + 4) * 0.3 + 0.3,
+                       1 / 12.0, voice);
+        }
+      };
+    };
 
-	std::ostringstream name;
-	name << "curlicue_" << (int)k << ".wav";
+    // YOU NEVER GIVE ME YOUR MONEY
 
-	WaveBuilder wave(name.str().c_str(), 1, 48000);
+    auto firstPassage =
+        amusia::chain(chord(amusia::arpeggios::minorSeven.clone()
+                                .translate(amusia::notes::a)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::minor.clone()
+                                .translate(amusia::notes::d)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::g)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::c)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::majorMajorSeven.clone()
+                                .translate(amusia::notes::f)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::minorSix.clone()
+                                .translate(amusia::notes::d)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            16),
+                      chord(amusia::arpeggios::majorSeven.clone()
+                                .translate(amusia::notes::e)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            16),
+                      chord(amusia::arpeggios::minor.clone()
+                                .translate(amusia::notes::a)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            64));
 
-	std::size_t i;
+    auto secondPassage =
+        amusia::chain(chord(amusia::arpeggios::minorSeven.clone()
+                                .translate(amusia::notes::a)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::minor.clone()
+                                .translate(amusia::notes::d)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::g)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::c)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::majorMajorSeven.clone()
+                                .translate(amusia::notes::f)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::minorSix.clone()
+                                .translate(amusia::notes::d)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            16),
+                      chord(amusia::arpeggios::majorSeven.clone()
+                                .translate(amusia::notes::e)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            16),
+                      chord(amusia::arpeggios::minor.clone()
+                                .translate(amusia::notes::a)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::c)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            8),
+                      chord(amusia::arpeggios::majorSeven.clone()
+                                .translate(amusia::notes::g)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            8),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::c)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            16));
 
-	const auto voice = [](double frequency, double time) -> double {
-		const double x = voices::getX(frequency, time);
-		return sin(cos(x*2)+sin(x*3)+x);
-	};
+    auto thirdPassage =
+        amusia::chain(chord(amusia::arpeggios::minorSeven.clone()
+                                .translate(amusia::notes::a)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::majorSeven.clone()
+                                .translate(amusia::notes::e)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::minor.clone()
+                                .translate(amusia::notes::a)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::majorSeven.clone()
+                                .translate(amusia::notes::c)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            32),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::f)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            24),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::g)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            16),
+                      chord(amusia::arpeggios::major.clone()
+                                .translate(amusia::notes::c)
+                                .translate_octave(octave)
+                                .extend(2)
+                                .extend_root(2),
+                            16));
 
-	auto chord = [&i, &wave, &voice, k](double note, Scale scale, std::size_t n) {
-		return Sequence([&i, &wave, &voice, k, note, scale, n]() {
-			for (const auto end = i + n; i < end; ++i) {
-				wave.addNote(scale(notes::octave(note, 7), floor(curlicueNormalized(static_cast<double>(i), k) * scale.numPositions * 3)),
-					.75, 1 / 8.0, voice);
-			}
-		});
-	};
+    auto song = amusia::chain(amusia::repeat(firstPassage, 2), secondPassage,
+                              amusia::repeat(thirdPassage, 2));
 
-	// YOU NEVER GIVE ME YOUR MONEY
+    song();
 
-	auto firstPassage = chain(
-		chord(notes::a, arpeggios::minorSeven, 32),
-		chord(notes::d, arpeggios::minor, 32),
-		chord(notes::g, arpeggios::major, 32),
-		chord(notes::c, arpeggios::major, 32),
-		chord(notes::f, arpeggios::majorMajorSeven, 32),
-		chord(notes::d, arpeggios::minorSix, 16),
-		chord(notes::e, arpeggios::majorSeven, 16),
-		chord(notes::a, arpeggios::minor, 64));
+    return wave;
+  };
 
-	auto secondPassage = chain(
-		chord(notes::a, arpeggios::minorSeven, 32),
-		chord(notes::d, arpeggios::minor, 32),
-		chord(notes::g, arpeggios::major, 32),
-		chord(notes::c, arpeggios::major, 32),
-		chord(notes::f, arpeggios::majorMajorSeven, 32),
-		chord(notes::d, arpeggios::minorSix, 16),
-		chord(notes::e, arpeggios::majorSeven, 16),
-		chord(notes::a, arpeggios::minor, 32),
-		chord(notes::c, arpeggios::major, 8),
-		chord(notes::g, arpeggios::majorSeven, 8),
-		chord(notes::c, arpeggios::major, 16));
+  auto track1 = make_track(3, 6, amusia::voices::circular);
+  auto track2 = make_track(7, 7, amusia::voices::square);
+  track1.mix(track2);
+  track1.toFile("curlicue.wav");
 
-	auto thirdPassage = chain(
-		chord(notes::c, arpeggios::major, 32),
-		chord(notes::e, arpeggios::majorSeven, 32),
-		chord(notes::a, arpeggios::minor, 32),
-		chord(notes::c, arpeggios::majorSeven, 32),
-		chord(notes::f, arpeggios::major, 24),
-		chord(notes::g, arpeggios::major, 16),
-		chord(notes::c, arpeggios::major, 24));
-
-	chain(
-		repeat(firstPassage, 2),
-		secondPassage,
-		repeat(thirdPassage, 2))();
-
-    return 0;
+  return 0;
 }
